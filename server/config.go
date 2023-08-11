@@ -28,6 +28,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/RocksLabs/kvrocks_controller/storage/persistence/etcd"
+	"github.com/RocksLabs/kvrocks_controller/storage/persistence/kvrocks"
 )
 
 type AdminConfig struct {
@@ -37,9 +38,11 @@ type AdminConfig struct {
 const defaultPort = 9379
 
 type Config struct {
-	Addr  string       `yaml:"addr"`
-	Etcd  *etcd.Config `yaml:"etcd"`
-	Admin AdminConfig  `yaml:"admin"`
+	Addr        string          `yaml:"addr"`
+	StorageType *string         `yaml:"storageType,omitempty"`
+	Etcd        *etcd.Config    `yaml:"etcd,omitempty"`
+	KvRocks     *kvrocks.Config `yaml:"kvrocks,omitempty"`
+	Admin       AdminConfig     `yaml:"admin"`
 }
 
 func (c *Config) init() {
@@ -48,7 +51,7 @@ func (c *Config) init() {
 	}
 
 	c.Addr = c.getAddr()
-	if c.Etcd == nil {
+	if (c.StorageType == nil || *c.StorageType == "etcd") && c.Etcd == nil {
 		c.Etcd = &etcd.Config{
 			Addrs: []string{"127.0.0.1:2379"},
 		}

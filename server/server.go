@@ -27,7 +27,9 @@ import (
 	"net/http/pprof"
 	"time"
 
+	"github.com/RocksLabs/kvrocks_controller/storage/persistence"
 	"github.com/RocksLabs/kvrocks_controller/storage/persistence/etcd"
+	"github.com/RocksLabs/kvrocks_controller/storage/persistence/kvrocks"
 
 	"github.com/RocksLabs/kvrocks_controller/controller"
 	"github.com/RocksLabs/kvrocks_controller/controller/probe"
@@ -46,7 +48,7 @@ type Server struct {
 
 func NewServer(cfg *Config) (*Server, error) {
 	cfg.init()
-	persist, err := etcd.New(cfg.Addr, "/kvrocks/controller/leader", cfg.Etcd)
+	persist, err := createPersistence(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +71,22 @@ func NewServer(cfg *Config) (*Server, error) {
 		config:     cfg,
 		engine:     gin.New(),
 	}, nil
+}
+
+func createPersistence(cfg *Config) (persistence.Persistence, error) {
+	var persist persistence.Persistence
+	var err error
+	if cfg.StorageType == nil || *cfg.StorageType == "etcd" {
+		persist, err = etcd.New(cfg.Addr, "/kvrocks/controller/leader", cfg.Etcd)
+	} else if *cfg.StorageType == "kvrocks" {
+		persist, err = kvrocks.New(cfg.Addr, cfg.KvRocks)
+	} else {
+		return nil, fmt.Errorf("unknonw storage type:%s", *cfg.StorageType)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return persist, nil
 }
 
 func (srv *Server) startAPIServer() {
